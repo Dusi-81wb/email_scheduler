@@ -23,6 +23,7 @@
 6. [How to Run Backend](#-how-to-run-backend)
 7. [How to Run Frontend](#-how-to-run-frontend)
 8. [Automated Verification & Testing](#-automated-verification--testing)
+9. [Assumptions, Shortcuts & Trade-offs](#-assumptions-shortcuts--trade-offs)
 
 ---
 
@@ -352,3 +353,27 @@ cd OutBox/backend
 npm run test:oauth
 ```
 Verifies fail-fast configuration validation, OAuth authorization URL construction, PostgreSQL user upsert, and cryptographic JWT verification.
+
+---
+
+## ⚖️ Assumptions, Shortcuts & Trade-offs
+
+### 1. Key Assumptions
+- **Single-Node Persistence Scope**: Designed with Docker Compose targeting single-node PostgreSQL (`16-alpine`), Redis (`7-alpine`) with Append-Only File (`AOF`), and Elasticsearch (`8.11.0`). For multi-region enterprise deployments, Redis Sentinel/Cluster and PostgreSQL read-replicas would be recommended.
+- **Ethereal Sandbox for Realistic SMTP Testing**: Assumes outbound emails in development/evaluation use Ethereal Virtual SMTP (`smtp.ethereal.email`) to provide real MIME generation, TLS handshakes, and clickable message preview URLs without risking domain spam blacklisting or requiring purchased domains with SPF/DKIM/DMARC records.
+- **Strict OAuth Security Model**: Assumes authentication must rely exclusively on cryptographic Google OAuth 2.0 with JWT sessions. Mock/development login shortcuts were intentionally excluded to maintain production-grade security compliance.
+- **Recipient Data Format**: Assumes CSV uploads follow standard contact list patterns with at least an `email` (or `Email`) header column, and optional `name` or `first_name` fields.
+
+### 2. Shortcuts & Development Pragmatism
+- **Automated SMTP Account Seeding**: During server bootstrap, if fewer than 2 sender accounts exist in PostgreSQL, the backend dynamically provisions and seeds Ethereal test accounts via `nodemailer.createTestAccount()`. This eliminates manual SMTP setup steps for evaluators.
+- **Search Resilience & Dual-Mode Query Engine**: If Elasticsearch is cold, restarting, or temporarily unreachable during local testing, the backend gracefully falls back to a PostgreSQL `ILIKE` wildcard database search, ensuring the frontend table search never returns 500 errors.
+- **Inline HTML Email Storage**: Rich text body content created via the custom 12-button formatting toolbar is persisted as sanitized HTML directly in PostgreSQL, allowing identical rendering across both the web preview modal and outbound email clients.
+
+### 3. Architectural Trade-offs
+
+| Architectural Decision | Chosen Approach | Alternative Considered | Trade-off Rationale |
+| :--- | :--- | :--- | :--- |
+| **Scheduling Engine** | **BullMQ Delayed Queues** (Redis sorted sets) | Periodic Cron Poller (`node-cron`, `agenda`) | **Cron jobs** introduce database polling stampedes and race conditions across clustered workers. **BullMQ** provides sub-second event timing, Redis atomic operations, zero database CPU waste, and built-in distributed locks at the cost of requiring Redis memory. |
+| **Rate Limiting Algorithm** | **Sliding-Window Sorted Set** (`ZADD` + `ZREMRANGEBYSCORE`) | Fixed-Window or Token Bucket | **Fixed windows** suffer from boundary burst spikes (e.g., sending all emails at 1:59 and again at 2:01). **Sliding-window** ensures an exact rolling 3600-second lookback window, guaranteeing sender reputation safety at the expense of slightly more Redis operations. |
+| **Quota Overflow Handling** | **Dynamic Next-Hour Rescheduling** | Hard Job Failure / Drop | When an hourly limit is breached, jobs are marked `RESCHEDULED` and delayed into the next hour window rather than dropped. This prioritizes **deliverability and reliability** over immediate turnaround. |
+| **Worker Concurrency** | **Configurable Pool (default: 5)** | Unbounded asynchronous dispatch | Unbounded dispatch risks exhausting network sockets and database connection pools. A bounded concurrency worker pool provides predictable throughput, deterministic delays, and memory stability under high load. |
