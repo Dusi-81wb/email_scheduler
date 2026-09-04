@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum JobStatus {
+  SCHEDULED
+  PROCESSING
+  SENT
+  RESCHEDULED
+  FAILED
+}
+
+model User {
+  id          String         @id @default(uuid())
+  email       String         @unique
+  name        String
+  avatarUrl   String?
+  googleId    String?
+  createdAt   DateTime       @default(now())
+  schedules   EmailSchedule[]
+  slackConfig SlackConfig?
+
+  @@map("users")
+}
+
+model SenderAccount {
+  id          String         @id @default(uuid())
+  email       String         @unique
+  host        String         @default("smtp.ethereal.email")
+  port        Int            @default(587)
+  user        String
+  pass        String
+  isEthereal  Boolean        @default(true)
+  hourlyLimit Int            @default(100)
+  createdAt   DateTime       @default(now())
+
+  @@map("sender_accounts")
+}
+
+model EmailSchedule {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject         String
+  body            String
+  totalRecipients Int
+  startTime       DateTime
+  delayBetweenMs  Int            @default(2000)
+  hourlyLimit     Int            @default(100)
+  createdAt       DateTime       @default(now())
+  jobs            EmailJob[]
+
+  @@map("email_schedules")
+}
+
+model EmailJob {
+  id              String         @id @default(uuid())
+  scheduleId      String
+  schedule        EmailSchedule  @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  senderEmail     String
+  recipientEmail  String
+  subject         String
+  body            String
+  status          JobStatus      @default(SCHEDULED)
+  scheduledAt     DateTime
+  sentAt          DateTime?
+  etherealUrl     String?
+  rescheduleCount Int            @default(0)
+  errorMessage    String?
+  idempotencyKey  String         @unique
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([senderEmail])
+  @@map("email_jobs")
+}
+
+model SlackConfig {
+  id          String         @id @default(uuid())
+  userId      String         @unique
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken String?
+  webhookUrl  String?
+  channel     String?
+  connectedAt DateTime       @default(now())
+
+  @@map("slack_configs")
+}
