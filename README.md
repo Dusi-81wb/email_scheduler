@@ -6,22 +6,41 @@
 
 ## 📑 Table of Contents
 
-1. [Architecture Overview](#-architecture-overview)
+1. [Demo Video & Walkthrough](#-demo-video-4m-36s)
+2. [Architecture Overview](#-architecture-overview)
    - [How Scheduling Works](#1-how-scheduling-works)
    - [How Persistence on Restart is Handled](#2-how-persistence-on-restart-is-handled)
    - [How Rate Limiting & Concurrency are Implemented](#3-how-rate-limiting--concurrency-are-implemented)
-2. [System Architecture Diagram](#-system-architecture-diagram)
-3. [Features Implemented](#-features-implemented)
+3. [System Architecture Diagram](#-system-architecture-diagram)
+4. [Features Implemented](#-features-implemented)
    - [Backend Features](#backend-features)
    - [Frontend Features](#frontend-features)
-4. [Ethereal Email & Environment Configuration](#-ethereal-email--environment-configuration)
+5. [Ethereal Email & Environment Configuration](#-ethereal-email--environment-configuration)
    - [How Ethereal Email is Configured](#how-ethereal-email-is-configured)
    - [Backend Environment Variables (`.env`)](#backend-environment-variables-env)
    - [Frontend Environment Variables (`.env.local`)](#frontend-environment-variables-envlocal)
    - [Google OAuth 2.0 Setup](#google-oauth-20-setup)
-5. [How to Run Backend](#-how-to-run-backend)
-6. [How to Run Frontend](#-how-to-run-frontend)
-7. [Automated Verification & Testing](#-automated-verification--testing)
+6. [How to Run Backend](#-how-to-run-backend)
+7. [How to Run Frontend](#-how-to-run-frontend)
+8. [Automated Verification & Testing](#-automated-verification--testing)
+
+---
+
+## 🎥 Demo Video (4m 36s)
+
+> **Full Operations & Crash Resilience Demo**: Watch the end-to-end walkthrough showing email scheduling, real-time BullMQ job queuing, server restart persistence, and sliding-window rate limiting under load.
+
+https://github.com/user-attachments/assets/35b7fbbe-60b0-4290-aa1f-1c0dab06c3d3
+
+### ⏱️ Video Chapters & Key Scenarios
+
+| Timestamp | Scenario / Feature Demonstrated | Technical Details |
+| :--- | :--- | :--- |
+| **0:00 - 0:45** | **Authentication & Dashboard Overview** | Strict Google OAuth 2.0 login, Scheduled vs. Sent counters, system metrics |
+| **0:45 - 1:40** | **Email Composition & Scheduling** | CSV leads upload, rich text editor, schedule start time, throttle delay configuration |
+| **1:40 - 2:30** | **Queue Inspection & Live Dispatch** | BullMQ queue board (`/admin/queues`), live Redis job timers & status tracking |
+| **2:30 - 3:40** | **Server Restart & Crash Resilience Scenario** | Backend process terminated (`SIGINT`), server rebooted, future jobs survive & send on schedule |
+| **3:40 - 4:36** | **Rate Limiting & Ethereal SMTP Delivery** | Hourly limit throttling, next-hour reschedule, Ethereal preview URLs, Slack alerts |
 
 ---
 
