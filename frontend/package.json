@@ -1,6 +1,7 @@
 {
   "name": "outbox-frontend",
   "version": "1.0.0",
+  "description": "Next.js 14 dashboard with rich text composition and real-time email scheduling monitor",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
